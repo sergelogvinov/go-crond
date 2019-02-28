@@ -14,7 +14,7 @@ import (
 const (
 	Name      = "go-crond"
 	Author    = "webdevops.io"
-	Version   = "0.6.1"
+	Version   = "0.6.2"
 	LogPrefix = "go-crond: "
 )
 
