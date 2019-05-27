@@ -1,3 +1,14 @@
+---
+title: go-crond
+description: Can't live without cron in your OpenShift project?  Check out [go-crond](https://github.com/BCDevOps/go-crond) it's an OpenShift compatible cron daemon written in golang.
+resourceType: Components
+personas: 
+  - Developer
+  - Product Owner
+  - Designer
+labels:
+  - cron
+---
 # go-crond
 
 [![GitHub release](https://img.shields.io/github/release/webdevops/go-crond.svg)](https://github.com/webdevops/go-crond/releases)
