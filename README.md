@@ -17,7 +17,7 @@ labels:
 [![Github All Releases](https://img.shields.io/github/downloads/webdevops/go-crond/total.svg)]()
 [![Github Releases](https://img.shields.io/github/downloads/webdevops/go-crond/latest/total.svg)]()
 
-A cron daemon written in golang
+Can't live without cron in your OpenShift project?  Check out [go-crond](https://github.com/BCDevOps/go-crond) it's an OpenShift compatible cron daemon written in golang.
 
 Inspired by https://github.com/anarcher/go-cron
 
