@@ -1,15 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"github.com/robfig/cron"
 	"os"
 	"os/exec"
 	"os/user"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
+
+	"github.com/robfig/cron"
 )
 
 type Runner struct {
@@ -26,11 +25,8 @@ func NewRunner() *Runner {
 // Add crontab entry
 func (r *Runner) Add(cronjob CrontabEntry) error {
 	cronSpec := cronjob.Spec
-	if !strings.HasPrefix(cronjob.Spec, "@") {
-		cronSpec = fmt.Sprintf("0 %s", cronjob.Spec)
-	}
 
-	err := r.cron.AddFunc(cronSpec, r.cmdFunc(cronjob, func(execCmd *exec.Cmd) bool {
+	_, err := r.cron.AddFunc(cronSpec, r.cmdFunc(cronjob, func(execCmd *exec.Cmd) bool {
 		// before exec callback
 		LoggerInfo.CronjobExec(cronjob)
 		return true
@@ -47,13 +43,9 @@ func (r *Runner) Add(cronjob CrontabEntry) error {
 
 // Add crontab entry with user
 func (r *Runner) AddWithUser(cronjob CrontabEntry) error {
-
 	cronSpec := cronjob.Spec
-	if !strings.HasPrefix(cronjob.Spec, "@") {
-		cronSpec = fmt.Sprintf("0 %s", cronjob.Spec)
-	}
 
-	err := r.cron.AddFunc(cronSpec, r.cmdFunc(cronjob, func(execCmd *exec.Cmd) bool {
+	_, err := r.cron.AddFunc(cronSpec, r.cmdFunc(cronjob, func(execCmd *exec.Cmd) bool {
 		// before exec callback
 		LoggerInfo.CronjobExec(cronjob)
 

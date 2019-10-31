@@ -399,6 +399,7 @@ func main() {
 		// create new cron runner
 		runner := createCronRunner(args)
 		registerRunnerShutdown(runner)
+		registerRunnerChildShutdown(runner)
 
 		// chdir to root to prevent relative path errors
 		os.Chdir("/")
@@ -427,5 +428,23 @@ func registerRunnerShutdown(runner *Runner) {
 
 		LoggerInfo.Println("Terminated")
 		os.Exit(1)
+	}()
+}
+
+func registerRunnerChildShutdown(runner *Runner) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGCHLD)
+	go func() {
+		s := <-c
+		LoggerInfo.Println("Got signal: ", s)
+
+		var ws syscall.WaitStatus
+		zpid, err := syscall.Wait4(-1, &ws, 0, nil)
+
+		if err == nil && zpid > 0 {
+			LoggerInfo.Println("Zombie pid was", zpid, "status was", ws.ExitStatus())
+		}
+
+		registerRunnerChildShutdown(runner)
 	}()
 }

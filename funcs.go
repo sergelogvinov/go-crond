@@ -82,7 +82,7 @@ func checkIfFileIsValid(f os.FileInfo, path string) bool {
 			LoggerInfo.Printf("Ignoring file with wrong modes (not xx22) %s\n", path)
 		}
 	} else {
-		LoggerInfo.Printf("Ignoring non regular file %s\n", path)
+		return true
 	}
 
 	return false
