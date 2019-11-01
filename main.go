@@ -408,7 +408,7 @@ func main() {
 		// create new cron runner
 		runner := createCronRunner(args)
 		registerRunnerShutdown(runner)
-		registerRunnerChildShutdown(runner)
+		//registerRunnerChildShutdown(runner)
 
 		// chdir to root to prevent relative path errors
 		os.Chdir("/")
