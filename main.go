@@ -444,8 +444,7 @@ func registerRunnerChildShutdown(runner *Runner) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGCHLD)
 	go func() {
-		s := <-c
-		LoggerInfo.Println("Got signal: ", s)
+		<-c
 
 		var ws syscall.WaitStatus
 		zpid, err := syscall.Wait4(-1, &ws, 0, nil)

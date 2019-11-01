@@ -32,9 +32,11 @@ type EnvVar struct {
 }
 
 type CrontabEntry struct {
+	Name    string
 	Spec    string
 	User    string
 	Command string
+	Pwd     string
 	Env     []string
 	Shell   string
 }
@@ -77,12 +79,14 @@ func (p *Parser) Parse() []CrontabEntry {
 // Parse lines from crontab
 func (p *Parser) parseLines() []CrontabEntry {
 	var entries []CrontabEntry
+	var cronjobName string
 	var crontabSpec string
 	var crontabUser string
 	var crontabCommand string
 	var environment []string
 
 	shell := DEFAULT_SHELL
+	pwd := "/"
 
 	specCleanupRegexp := regexp.MustCompile(`\s+`)
 
@@ -104,6 +108,8 @@ func (p *Parser) parseLines() []CrontabEntry {
 			if envName == "SHELL" {
 				// custom shell for command
 				shell = envValue
+			} else if envName == "PWD" {
+				pwd = envValue
 			} else {
 				// normal environment variable
 				environment = append(environment, fmt.Sprintf("%s=%s", envName, envValue))
@@ -124,10 +130,13 @@ func (p *Parser) parseLines() []CrontabEntry {
 				crontabCommand = strings.TrimSpace(m[2])
 			}
 
+			cronjobName = specCleanupRegexp.Split(crontabCommand, 2)[0]
+
 			// shrink white spaces for better handling
 			crontabSpec = specCleanupRegexp.ReplaceAllString(crontabSpec, " ")
 
-			entries = append(entries, CrontabEntry{Spec: crontabSpec, User: crontabUser, Command: crontabCommand, Env: environment, Shell: shell})
+			entries = append(entries, CrontabEntry{Name: cronjobName, Spec: crontabSpec, User: crontabUser,
+				Command: crontabCommand, Pwd: pwd, Env: environment, Shell: shell})
 		}
 	}
 

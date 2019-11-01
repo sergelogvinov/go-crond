@@ -115,6 +115,7 @@ func (r *Runner) cmdFunc(cronjob CrontabEntry, cmdCallback func(*exec.Cmd) bool)
 
 		// Init command
 		execCmd := exec.Command(taskShell, "-c", cronjob.Command)
+		execCmd.Dir = cronjob.Pwd
 
 		// add custom env to cronjob
 		if len(cronjob.Env) >= 1 {
