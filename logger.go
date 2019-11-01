@@ -35,10 +35,6 @@ func (CronLogger CronLogger) CronjobToString(cronjob CrontabEntry) string {
 	parts = append(parts, fmt.Sprintf("usr:%v", cronjob.User))
 	parts = append(parts, fmt.Sprintf("cmd:'%v'", cronjob.Command))
 
-	if len(cronjob.Env) >= 1 {
-		parts = append(parts, fmt.Sprintf("env:'%v'", cronjob.Env))
-	}
-
 	return strings.Join(parts, " ")
 }
 
