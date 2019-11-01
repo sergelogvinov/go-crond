@@ -2,13 +2,16 @@ package main
 
 import (
 	"fmt"
-	flags "github.com/jessevdk/go-flags"
+	"net/http"
 	"os"
 	"os/signal"
 	"os/user"
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	flags "github.com/jessevdk/go-flags"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -33,6 +36,8 @@ var opts struct {
 	RunPartsDaily       []string `           long:"run-parts-daily"      description:"Execute files in directory every beginning day (like run-parts)"`
 	RunPartsWeekly      []string `           long:"run-parts-weekly"     description:"Execute files in directory every beginning week (like run-parts)"`
 	RunPartsMonthly     []string `           long:"run-parts-monthly"    description:"Execute files in directory every beginning month (like run-parts)"`
+	ListenAddress       string   `           long:"listen-address"       description:"Address to listen on for web interface and telemetry."  default:":9177"`
+	MetricsPath         string   `           long:"telemetry-path"       description:"Path under which to expose metrics."                    default:"/metrics"`
 	AllowUnprivileged   bool     `           long:"allow-unprivileged"   description:"Allow daemon to run as non root (unprivileged) user"`
 	EnableUserSwitching bool
 	Verbose             bool `short:"v"  long:"verbose"              description:"verbose mode"`
@@ -194,7 +199,7 @@ func collectCrontabs(args []string) []CrontabEntry {
 	var ret []CrontabEntry
 
 	// include system default crontab
-	if ! opts.NoAuto {
+	if !opts.NoAuto {
 		ret = append(ret, includeSystemDefaults()...)
 	}
 
@@ -327,7 +332,7 @@ func includeSystemDefaults() []CrontabEntry {
 	// ----------------------
 	// General
 	// ----------------------
-	if ! systemDetected {
+	if !systemDetected {
 		if checkIfFileExists("/etc/crontab") {
 			ret = append(ret, includePathForCrontabs("/etc/crontab", CRONTAB_TYPE_SYSTEM)...)
 		}
@@ -387,6 +392,10 @@ func main() {
 	if err != nil {
 		LoggerError.Fatalf("Could not get current path: %v", err)
 	}
+
+	LoggerInfo.Printf("Starting metrics %s%s", opts.ListenAddress, opts.MetricsPath)
+	http.Handle(opts.MetricsPath, promhttp.Handler())
+	go http.ListenAndServe(opts.ListenAddress, nil)
 
 	// endless daemon-reload loop
 	for {
