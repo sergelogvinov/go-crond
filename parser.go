@@ -17,6 +17,8 @@ const (
 	//                  ----spec------------------------------------    -cmd-
 	CRONJOB_USER = `^\s*([^@\s]+\s+\S+\s+\S+\s+\S+\s+\S+|@every\s+\S+)\s+(.+)$`
 
+	CRONJOB_NAME = `^([\w\s.]+)(.*)$`
+
 	DEFAULT_SHELL = "sh"
 )
 
@@ -24,6 +26,7 @@ var (
 	envLineRegex       = regexp.MustCompile(ENV_LINE)
 	cronjobSystemRegex = regexp.MustCompile(CRONJOB_SYSTEM)
 	cronjobUserRegex   = regexp.MustCompile(CRONJOB_USER)
+	cronjobNameRegex   = regexp.MustCompile(CRONJOB_NAME)
 )
 
 type EnvVar struct {
@@ -130,7 +133,12 @@ func (p *Parser) parseLines() []CrontabEntry {
 				crontabCommand = strings.TrimSpace(m[2])
 			}
 
-			cronjobName = specCleanupRegexp.Split(crontabCommand, 2)[0]
+			if cronjobNameRegex.MatchString(crontabCommand) == true {
+				command := cronjobNameRegex.FindStringSubmatch(crontabCommand)
+				cronjobName = strings.TrimSpace(command[1])
+			} else {
+				cronjobName = crontabCommand
+			}
 
 			// shrink white spaces for better handling
 			crontabSpec = specCleanupRegexp.ReplaceAllString(crontabSpec, " ")
