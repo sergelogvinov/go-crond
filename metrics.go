@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,12 +18,12 @@ func NewMetricsExporter(r *Runner) *MetricsExporter {
 		r: r,
 		CronJobStatus: prometheus.NewDesc("cronjob_execute_error",
 			"Last cronjob run error",
-			[]string{"name"},
+			[]string{"name", "id"},
 			nil,
 		),
 		CronJobDuration: prometheus.NewDesc("cronjob_execute_duration",
 			"Last cronjob run duration seconds",
-			[]string{"name"},
+			[]string{"name", "id"},
 			nil,
 		),
 	}
@@ -39,11 +40,11 @@ func (collector *MetricsExporter) Collect(ch chan<- prometheus.Metric) {
 	for _, e := range jobs {
 		if e.Updated {
 			if e.Status != nil {
-				ch <- prometheus.MustNewConstMetric(collector.CronJobStatus, prometheus.CounterValue, 1, e.Name)
+				ch <- prometheus.MustNewConstMetric(collector.CronJobStatus, prometheus.CounterValue, 1, e.Name, fmt.Sprintf("%d", e.Id))
 			} else {
-				ch <- prometheus.MustNewConstMetric(collector.CronJobStatus, prometheus.CounterValue, 0, e.Name)
+				ch <- prometheus.MustNewConstMetric(collector.CronJobStatus, prometheus.CounterValue, 0, e.Name, fmt.Sprintf("%d", e.Id))
 			}
-			ch <- prometheus.MustNewConstMetric(collector.CronJobDuration, prometheus.CounterValue, float64(e.Elapsed/time.Second), e.Name)
+			ch <- prometheus.MustNewConstMetric(collector.CronJobDuration, prometheus.CounterValue, float64(e.Elapsed/time.Second), e.Name, fmt.Sprintf("%d", e.Id))
 		}
 	}
 }

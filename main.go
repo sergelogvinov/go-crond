@@ -428,7 +428,7 @@ func main() {
 		// create new cron runner
 		runner.CreateCronjobs(collectCrontabs(args))
 		registerRunnerShutdown(runner)
-		//registerRunnerChildShutdown(runner)
+		registerRunnerChildShutdown(runner)
 
 		// chdir to root to prevent relative path errors
 		os.Chdir("/")
@@ -467,7 +467,9 @@ func registerRunnerChildShutdown(runner *Runner) {
 		<-c
 
 		var ws syscall.WaitStatus
-		zpid, err := syscall.Wait4(-1, &ws, 0, nil)
+		r := syscall.Rusage{}
+
+		zpid, err := syscall.Wait4(-1, &ws, syscall.WNOHANG, &r)
 
 		if err == nil && zpid > 0 {
 			LoggerInfo.Println("Zombie pid was", zpid, "status was", ws.ExitStatus())
