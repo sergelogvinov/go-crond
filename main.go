@@ -9,8 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"text/template"
 
 	flags "github.com/jessevdk/go-flags"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -24,6 +26,23 @@ const (
 const (
 	CRONTAB_TYPE_SYSTEM = ""
 )
+
+type tplCronListParams struct {
+	Cronjobs []Job
+}
+
+const CRONLIST = `
+<html>
+<head><title>Cron Explorer</title></head>
+<body>
+<h1>Cron Explorer</h1>
+<p><table>
+{{range .Cronjobs}}
+<tr><td><b>{{.Name}}</b></td><td>err:{{.Status}}</td><td>Last run second: {{.Elapsed}}</td></tr>
+{{end}}
+</table></p>
+</body>
+</html>`
 
 var opts struct {
 	DefaultUser         string   `           long:"default-user"         description:"Default user"                  default:"root"`
@@ -349,22 +368,6 @@ func includeSystemDefaults() []CrontabEntry {
 	return ret
 }
 
-func createCronRunner(args []string) *Runner {
-	crontabEntries := collectCrontabs(args)
-
-	runner := NewRunner()
-
-	for _, crontabEntry := range crontabEntries {
-		if opts.EnableUserSwitching {
-			runner.AddWithUser(crontabEntry)
-		} else {
-			runner.Add(crontabEntry)
-		}
-	}
-
-	return runner
-}
-
 func main() {
 	initLogger()
 	args := initArgParser()
@@ -393,8 +396,25 @@ func main() {
 		LoggerError.Fatalf("Could not get current path: %v", err)
 	}
 
+	runner := NewRunner()
+
 	LoggerInfo.Printf("Starting metrics %s%s", opts.ListenAddress, opts.MetricsPath)
+
+	exporter := NewMetricsExporter(runner)
+	prometheus.MustRegister(exporter)
+
 	http.Handle(opts.MetricsPath, promhttp.Handler())
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		tmpl := template.New(`cronjobs`)
+		tmpl, _ = tmpl.Parse(CRONLIST)
+
+		params := tplCronListParams{
+			Cronjobs: runner.GetJobs(),
+		}
+
+		tmpl.Execute(w, params)
+	})
+
 	go http.ListenAndServe(opts.ListenAddress, nil)
 
 	// endless daemon-reload loop
@@ -406,7 +426,7 @@ func main() {
 		}
 
 		// create new cron runner
-		runner := createCronRunner(args)
+		runner.CreateCronjobs(collectCrontabs(args))
 		registerRunnerShutdown(runner)
 		//registerRunnerChildShutdown(runner)
 

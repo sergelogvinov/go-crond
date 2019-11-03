@@ -5,28 +5,59 @@ import (
 	"os/exec"
 	"os/user"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/robfig/cron"
 )
 
+type Job struct {
+	Id      int
+	cronId  cron.EntryID
+	Name    string
+	Updated bool
+	Status  error
+	Elapsed time.Duration
+}
+
 type Runner struct {
-	cron *cron.Cron
+	cron   *cron.Cron
+	jobsMu sync.Mutex
+	jobs   []Job
+	nextId int
 }
 
 func NewRunner() *Runner {
 	r := &Runner{
-		cron: cron.New(),
+		jobsMu: sync.Mutex{},
 	}
 	return r
+}
+
+// Recreate crontab jobs
+func (r *Runner) CreateCronjobs(crontabEntries []CrontabEntry) error {
+	r.cron = cron.New()
+	r.jobs = []Job{}
+
+	for _, crontabEntry := range crontabEntries {
+		if opts.EnableUserSwitching {
+			r.AddWithUser(crontabEntry)
+		} else {
+			r.Add(crontabEntry)
+		}
+	}
+
+	return nil
 }
 
 // Add crontab entry
 func (r *Runner) Add(cronjob CrontabEntry) error {
 	cronSpec := cronjob.Spec
+	r.jobsMu.Lock()
+	defer r.jobsMu.Unlock()
 
-	_, err := r.cron.AddFunc(cronSpec, r.cmdFunc(cronjob, func(execCmd *exec.Cmd) bool {
+	id, err := r.cron.AddFunc(cronSpec, r.cmdFunc(r.nextId, cronjob, func(execCmd *exec.Cmd) bool {
 		// before exec callback
 		LoggerInfo.CronjobExec(cronjob)
 		return true
@@ -36,6 +67,9 @@ func (r *Runner) Add(cronjob CrontabEntry) error {
 		LoggerError.Printf("Failed add cron job spec:%v cmd:%v err:%v", cronjob.Spec, cronjob.Command, err)
 	} else {
 		LoggerInfo.CronjobAdd(cronjob)
+
+		r.jobs = append(r.jobs, Job{Id: r.nextId, cronId: id, Name: cronjob.Name})
+		r.nextId++
 	}
 
 	return err
@@ -44,8 +78,10 @@ func (r *Runner) Add(cronjob CrontabEntry) error {
 // Add crontab entry with user
 func (r *Runner) AddWithUser(cronjob CrontabEntry) error {
 	cronSpec := cronjob.Spec
+	r.jobsMu.Lock()
+	defer r.jobsMu.Unlock()
 
-	_, err := r.cron.AddFunc(cronSpec, r.cmdFunc(cronjob, func(execCmd *exec.Cmd) bool {
+	id, err := r.cron.AddFunc(cronSpec, r.cmdFunc(r.nextId, cronjob, func(execCmd *exec.Cmd) bool {
 		// before exec callback
 		LoggerInfo.CronjobExec(cronjob)
 
@@ -80,6 +116,9 @@ func (r *Runner) AddWithUser(cronjob CrontabEntry) error {
 		LoggerError.Printf("Failed add cron job %v; Error:%v", LoggerError.CronjobToString(cronjob), err)
 	} else {
 		LoggerInfo.Printf("Add cron job %v", LoggerError.CronjobToString(cronjob))
+
+		r.jobs = append(r.jobs, Job{Id: r.nextId, cronId: id, Name: cronjob.Name})
+		r.nextId++
 	}
 
 	return err
@@ -102,8 +141,20 @@ func (r *Runner) Stop() {
 	LoggerInfo.Println("Stop runner")
 }
 
+func (r *Runner) GetJobs() []Job {
+	r.jobsMu.Lock()
+	defer r.jobsMu.Unlock()
+
+	var entries = make([]Job, len(r.jobs))
+
+	for i, e := range r.jobs {
+		entries[i] = e
+	}
+	return entries
+}
+
 // Execute crontab command
-func (r *Runner) cmdFunc(cronjob CrontabEntry, cmdCallback func(*exec.Cmd) bool) func() {
+func (r *Runner) cmdFunc(id int, cronjob CrontabEntry, cmdCallback func(*exec.Cmd) bool) func() {
 	cmdFunc := func() {
 		// fall back to normal shell if not specified
 		taskShell := cronjob.Shell
@@ -129,6 +180,16 @@ func (r *Runner) cmdFunc(cronjob CrontabEntry, cmdCallback func(*exec.Cmd) bool)
 			out, err := execCmd.CombinedOutput()
 
 			elapsed := time.Since(start)
+
+			for i, entry := range r.jobs {
+				if entry.Id == id {
+					r.jobsMu.Lock()
+					r.jobs[i].Status = err
+					r.jobs[i].Elapsed = elapsed
+					r.jobs[i].Updated = true
+					r.jobsMu.Unlock()
+				}
+			}
 
 			if err != nil {
 				LoggerError.CronjobExecFailed(cronjob, string(out), err, elapsed)

@@ -27,6 +27,8 @@ RUN useradd guest
 # Install deps
 RUN go get -u github.com/robfig/cron
 RUN go get -u github.com/jessevdk/go-flags
+RUN go get -u github.com/prometheus/client_golang/prometheus
+RUN go get -u github.com/prometheus/client_golang/prometheus/promhttp
 
 RUN mkdir -p \
     /etc/cron.d/ \
