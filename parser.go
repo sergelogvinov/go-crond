@@ -17,7 +17,7 @@ const (
 	//                  ----spec------------------------------------    -cmd-
 	CRONJOB_USER = `^\s*([^@\s]+\s+\S+\s+\S+\s+\S+\s+\S+|@every\s+\S+)\s+(.+)$`
 
-	CRONJOB_NAME = `^([\w\s.]+)(.*)$`
+	CRONJOB_NAME = `^([\./\w]*\/)?([\w\s\.\&\|]+)(.*)?$`
 
 	DEFAULT_SHELL = "sh"
 )
@@ -135,7 +135,7 @@ func (p *Parser) parseLines() []CrontabEntry {
 
 			if cronjobNameRegex.MatchString(crontabCommand) == true {
 				command := cronjobNameRegex.FindStringSubmatch(crontabCommand)
-				cronjobName = strings.TrimSpace(command[1])
+				cronjobName = strings.TrimSpace(command[2])
 			} else {
 				cronjobName = crontabCommand
 			}

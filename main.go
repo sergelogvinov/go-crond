@@ -464,17 +464,19 @@ func registerRunnerChildShutdown(runner *Runner) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGCHLD)
 	go func() {
-		<-c
+		for {
+			sig := <-c
 
-		var ws syscall.WaitStatus
-		r := syscall.Rusage{}
+			if sig == syscall.SIGCHLD {
+				var ws syscall.WaitStatus
+				r := syscall.Rusage{}
 
-		zpid, err := syscall.Wait4(-1, &ws, syscall.WNOHANG, &r)
+				zpid, err := syscall.Wait4(-1, &ws, syscall.WNOHANG, &r)
 
-		if err == nil && zpid > 0 {
-			LoggerInfo.Println("Zombie pid was", zpid, "status was", ws.ExitStatus())
+				if err == nil && zpid > 0 && ws.Exited() {
+					LoggerInfo.Println("Zombie pid was", zpid, "status was", ws.ExitStatus())
+				}
+			}
 		}
-
-		registerRunnerChildShutdown(runner)
 	}()
 }

@@ -49,12 +49,12 @@ func (CronLogger CronLogger) CronjobExec(cronjob CrontabEntry) {
 }
 
 func (CronLogger CronLogger) CronjobExecFailed(cronjob CrontabEntry, output string, err error, elapsed time.Duration) {
-	CronLogger.Printf("failed cronjob: cmd:%v out:%v err:%v time:%s\n", cronjob.Command, output, err, elapsed)
+	CronLogger.Printf("failed cronjob: cmd:%v err:%v time:%s\n%v\n", cronjob.Command, err, elapsed, output)
 }
 
 func (CronLogger CronLogger) CronjobExecSuccess(cronjob CrontabEntry, output string, err error, elapsed time.Duration) {
 	if opts.Verbose {
-		CronLogger.Printf("ok: cronjob: cmd:%v out:%v err:%v time:%s\n", cronjob.Command, output, err, elapsed)
+		CronLogger.Printf("ok: cronjob: cmd:%v err:%v time:%s\n%v\n", cronjob.Command, err, elapsed, output)
 	} else {
 		CronLogger.Printf("%v\n", output)
 	}
